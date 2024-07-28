@@ -1,0 +1,155 @@
+//Define Device Types and Observer Pattern
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
+typedef struct Device Device;
+typedef struct CentralHub CentralHub;
+typedef struct Scheduler Scheduler;
+
+struct Device {
+    int id;
+    char type[20];
+    char status[10];
+    void (*update)(Device* self, const char* status);
+};
+
+struct CentralHub {
+    Device** devices;
+    int device_count;
+    Scheduler* scheduler;
+};
+
+struct Scheduler {
+    int (*schedule_task)(Scheduler* self, Device* device, const char* time, const char* command);
+};
+
+// Function prototypes
+void update_device_status(Device* device, const char* status);
+void turn_on_device(Device* device);
+void turn_off_device(Device* device);
+void print_device_status(const Device* device);
+void add_device(CentralHub* hub, Device* device);
+void schedule_device(CentralHub* hub, Device* device, const char* time, const char* command);
+void add_trigger(CentralHub* hub, const char* condition, const char* action);
+
+Device* create_device(int id, const char* type, const char* initial_status);
+void destroy_device(Device* device);
+void initialize_hub(CentralHub* hub, int capacity);
+void shutdown_hub(CentralHub* hub);
+void execute_scheduled_tasks(CentralHub* hub);
+
+//Implement Factory Method for Device Creation
+// Factory Method Pattern
+
+Device* create_device(int id, const char* type, const char* initial_status) {
+    Device* device = (Device*)malloc(sizeof(Device));
+    device->id = id;
+    strncpy(device->type, type, sizeof(device->type));
+    strncpy(device->status, initial_status, sizeof(device->status));
+    
+    if (strcmp(type, "light") == 0) {
+        device->update = turn_on_device;
+    } else if (strcmp(type, "thermostat") == 0) {
+        device->update = turn_off_device;
+    } else if (strcmp(type, "door") == 0) {
+        device->update = turn_on_device;
+    }
+    return device;
+}
+
+void destroy_device(Device* device) {
+    free(device);
+}
+
+//Implement Proxy Pattern with CentralHub
+// Proxy Pattern
+
+void update_device_status(Device* device, const char* status) {
+    strncpy(device->status, status, sizeof(device->status));
+    printf("Device %d (%s) status updated to: %s\n", device->id, device->type, device->status);
+}
+
+void turn_on_device(Device* device) {
+    update_device_status(device, "on");
+}
+
+void turn_off_device(Device* device) {
+    update_device_status(device, "off");
+}
+
+void print_device_status(const Device* device) {
+    printf("Device %d (%s) is %s\n", device->id, device->type, device->status);
+}
+
+void add_device(CentralHub* hub, Device* device) {
+    if (hub->device_count < 10) {
+        hub->devices[hub->device_count++] = device;
+    }
+}
+
+void initialize_hub(CentralHub* hub, int capacity) {
+    hub->devices = (Device**)malloc(sizeof(Device*) * capacity);
+    hub->device_count = 0;
+    hub->scheduler = (Scheduler*)malloc(sizeof(Scheduler));
+    hub->scheduler->schedule_task = NULL; // Placeholder
+}
+
+void shutdown_hub(CentralHub* hub) {
+    for (int i = 0; i < hub->device_count; i++) {
+        destroy_device(hub->devices[i]);
+    }
+    free(hub->devices);
+    free(hub->scheduler);
+}
+
+//Implement Scheduler and Trigger Functions
+// Scheduler and Trigger Functions
+
+int schedule_task(Scheduler* self, Device* device, const char* time, const char* command) {
+    // Placeholder for scheduling logic
+    printf("Scheduled %s at %s for Device %d\n", command, time, device->id);
+    return 0;
+}
+
+void add_trigger(CentralHub* hub, const char* condition, const char* action) {
+    // Placeholder for trigger logic
+    printf("Added trigger: %s when %s\n", action, condition);
+}
+
+void execute_scheduled_tasks(CentralHub* hub) {
+    // Placeholder for task execution
+    printf("Executing scheduled tasks...\n");
+}
+
+//Main Function to Test the System
+// Main Function
+
+int main() {
+    CentralHub hub;
+    initialize_hub(&hub, 10);
+    
+    Device* light = create_device(1, "light", "off");
+    Device* thermostat = create_device(2, "thermostat", "70");
+    Device* door = create_device(3, "door", "locked");
+    
+    add_device(&hub, light);
+    add_device(&hub, thermostat);
+    add_device(&hub, door);
+    
+    turn_on_device(light);
+    turn_off_device(thermostat);
+    print_device_status(light);
+    print_device_status(thermostat);
+    
+    hub.scheduler->schedule_task = schedule_task;
+    schedule_device(&hub, thermostat, "06:00", "Turn On");
+    
+    add_trigger(&hub, "temperature > 75", "turnOff(1)");
+    execute_scheduled_tasks(&hub);
+    
+    shutdown_hub(&hub);
+    return 0;
+}
+
